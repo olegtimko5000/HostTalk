@@ -1,0 +1,404 @@
+* { box-sizing: border-box; }
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+html, body {
+  margin: 0; padding: 0; height: 100%; width: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: #0f1115;
+  color: #e7e9ee;
+  overflow: hidden; /* the app itself scrolls internally, not the page */
+}
+
+#app {
+  display: flex;
+  /* --app-height is set by JS via visualViewport and always reflects the real
+     usable space, so the layout reacts correctly when the keyboard opens or
+     the phone rotates — plain 100vh doesn't shrink for the keyboard on most
+     mobile browsers. 100dvh is the CSS-only fallback for browsers without JS. */
+  height: 100vh;
+  height: 100dvh;
+  height: var(--app-height, 100dvh);
+  width: 100vw;
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
+}
+
+/* Sidebar */
+#sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  position: relative;
+  background: #171a21;
+  border-right: 1px solid #262b36;
+  display: flex;
+  flex-direction: column;
+}
+#sidebar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px; font-weight: 700; font-size: 1.1rem;
+  padding-top: calc(16px + var(--safe-top));
+  border-bottom: 1px solid #262b36;
+}
+.header-btns { display: flex; gap: 6px; }
+#create-chat-btn, #join-chat-btn {
+  background: #3a6ff7; color: white; border: none;
+  width: 28px; height: 28px; border-radius: 8px; font-size: 1rem;
+  cursor: pointer;
+}
+#create-chat-btn:hover, #join-chat-btn:hover { background: #5482ff; }
+#collapse-sidebar-btn {
+  position: absolute; top: 50%; right: -13px; transform: translateY(-50%);
+  z-index: 6;
+  display: flex; align-items: center; justify-content: center;
+  width: 26px; height: 26px; border-radius: 50%;
+  background: #171a21; color: #c6cad3; border: 1px solid #262b36;
+  font-size: 0.9rem; cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+#collapse-sidebar-btn:hover { background: #1f232c; }
+
+#tab-list { overflow-y: auto; flex: 1; padding: 8px; }
+.tab {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-radius: 8px; cursor: pointer;
+  margin-bottom: 4px; color: #c6cad3;
+}
+.tab:hover { background: #1f232c; }
+.tab.active { background: #262b36; color: #fff; }
+.tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge {
+  background: #3a6ff7; color: #fff; font-size: 0.72rem;
+  border-radius: 999px; padding: 1px 7px; margin-left: 6px;
+}
+
+/* Main chat area */
+#chat-area { flex: 1; min-width: 0; position: relative; display: flex; flex-direction: column; }
+
+#expand-sidebar-btn {
+  position: absolute; top: 12px; left: 16px; z-index: 5;
+  background: #171a21; border: 1px solid #262b36; color: #c6cad3;
+  width: 34px; height: 34px; border-radius: 8px; font-size: 1.1rem; cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+#expand-sidebar-btn:hover { background: #1f232c; }
+
+#empty-state {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; color: #8a8f9c;
+}
+.empty-btns { display: flex; gap: 10px; }
+#empty-create-btn, #empty-join-btn, #join-modal button, #create-modal button, #message-form button {
+  background: #3a6ff7; color: #fff; border: none; border-radius: 8px;
+  padding: 10px 16px; cursor: pointer; font-size: 0.95rem;
+}
+#empty-create-btn:hover, #empty-join-btn:hover { background: #5482ff; }
+
+#chat-view { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+#chat-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; border-bottom: 1px solid #262b36; font-weight: 600;
+  gap: 8px;
+}
+#chat-header-left {
+  display: flex; align-items: center; gap: 8px;
+  min-width: 0; /* allow the room name to truncate instead of overflowing */
+  flex: 1;
+}
+body.sidebar-collapsed #chat-header-left {
+  padding-left: 46px; /* leave room for the floating expand-sidebar button */
+}
+body.sidebar-collapsed #empty-state {
+  padding-top: 46px; /* same, so the floating button never overlaps empty-state content */
+}
+#chat-room-name {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0;
+}
+.header-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+#call-btn {
+  background: transparent; border: 1px solid #262b36; color: #c6cad3;
+  width: 38px; height: 38px; border-radius: 10px; font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+#call-btn:hover { background: #1f232c; }
+#call-btn.active { background: #22c55e33; border-color: #22c55e; color: #22c55e; }
+#leave-btn {
+  background: transparent; color: #ff6b6b; border: 1px solid #ff6b6b33;
+  border-radius: 8px; padding: 6px 12px; cursor: pointer; font-size: 0.85rem;
+  flex-shrink: 0; white-space: nowrap;
+}
+#leave-btn:hover { background: #ff6b6b1a; }
+
+#call-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 20px; background: #14301f; border-bottom: 1px solid #22c55e44;
+  font-size: 0.85rem; color: #c9f0d6;
+  flex-wrap: wrap; gap: 8px;
+}
+#call-participants { min-width: 0; overflow-wrap: break-word; }
+#call-controls { display: flex; gap: 8px; flex-shrink: 0; position: relative; }
+#call-controls button {
+  background: transparent; border: none; color: #c9f0d6; padding: 0;
+  width: 34px; height: 34px; border-radius: 8px; cursor: pointer; font-size: 0.95rem;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+#screenshare-btn.active,
+#fullscreen-call-controls button#fs-screenshare-btn.active { box-shadow: 0 0 0 2px #3a6ff7; border-radius: 8px; }
+#call-btn.active { box-shadow: 0 0 0 2px #22c55e; }
+
+/* Custom-drawn PNG icons used inside round call-control buttons */
+.btn-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  pointer-events: none;
+  object-fit: contain;
+}
+#call-controls .btn-icon,
+#fullscreen-call-controls .btn-icon {
+  width: 100%;
+  height: 100%;
+}
+#call-btn .btn-icon,
+#exit-fullscreen-call-btn .btn-icon {
+  width: 22px;
+  height: 22px;
+}
+.icon-flip {
+  transform: rotate(180deg);
+}
+
+/* Used instead of display:none for the switch-camera button — some mobile
+   browsers don't repaint a display change made deep inside an async handler
+   until an unrelated click forces a style recalculation. Opacity always
+   paints immediately since it's compositor-only. position:absolute removes
+   it from the flex row's layout so it doesn't leave a reserved empty gap. */
+.btn-hidden {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+#call-videos {
+  display: flex; flex-wrap: wrap; gap: 8px; padding: 8px 20px;
+}
+.call-remote-video {
+  width: 160px; height: 120px; border-radius: 10px; background: #000; object-fit: cover;
+  max-width: 40vw; /* never let a video tile alone force horizontal overflow */
+}
+.call-local-video {
+  transform: scaleX(-1); /* mirror, like a selfie camera */
+  border: 2px solid #3a6ff7;
+}
+.call-local-video.no-mirror {
+  transform: none; /* screen shares shouldn't be mirrored */
+}
+
+#messages {
+  flex: 1; min-width: 0; overflow-y: auto; overflow-x: hidden;
+  padding: 16px 20px; display: flex; flex-direction: column; gap: 8px;
+}
+.msg { max-width: 65%; display: flex; flex-direction: column; }
+.msg.mine { align-self: flex-end; align-items: flex-end; }
+.msg-author { font-size: 0.75rem; color: #8a8f9c; margin-bottom: 2px; padding-left: 4px; }
+.msg-bubble {
+  background: #262b36; padding: 8px 12px; border-radius: 14px;
+  word-wrap: break-word; white-space: pre-wrap;
+}
+.msg.mine .msg-bubble { background: #3a6ff7; color: #fff; }
+.msg.system {
+  align-self: center; color: #6d7280; font-size: 0.78rem; font-style: italic;
+  max-width: 100%;
+}
+
+#message-form {
+  display: flex; align-items: center; gap: 8px; padding: 14px 20px; border-top: 1px solid #262b36;
+  padding-bottom: calc(14px + var(--safe-bottom));
+}
+#message-input {
+  flex: 1; min-width: 0; background: #171a21; border: 1px solid #262b36; color: #e7e9ee;
+  border-radius: 10px; padding: 10px 14px; font-size: 0.95rem; outline: none;
+}
+#message-input:focus { border-color: #3a6ff7; }
+#message-form button[type="submit"] {
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: transparent; border: none; padding: 0; outline: none;
+  width: 40px; height: 40px; border-radius: 10px;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+#message-form button[type="submit"]:focus,
+#message-form button[type="submit"]:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+#message-form button[type="submit"] .btn-icon {
+  width: 100%;
+  height: 100%;
+}
+
+#attach-btn {
+  background: transparent; border: none; padding: 0; outline: none;
+  width: 40px; height: 40px; border-radius: 10px; cursor: pointer;
+  flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+#attach-btn:focus,
+#attach-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+#attach-btn .btn-icon { width: 100%; height: 100%; }
+
+#upload-progress {
+  padding: 0 20px 10px; font-size: 0.8rem; color: #8a8f9c;
+}
+
+/* File / image / video messages */
+.msg-file-image img {
+  max-width: 260px; max-height: 260px; border-radius: 12px; display: block;
+}
+.msg-file-video {
+  max-width: 300px; max-height: 300px; border-radius: 12px; display: block; background: #000;
+}
+.msg-file-generic {
+  display: flex; align-items: center; gap: 10px; text-decoration: none; color: inherit;
+}
+.file-icon { font-size: 1.5rem; }
+.file-info { display: flex; flex-direction: column; }
+.file-name { font-size: 0.9rem; word-break: break-all; }
+.file-size { font-size: 0.75rem; color: #9aa0ac; }
+
+/* Modal */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.55);
+  display: flex; align-items: center; justify-content: center; z-index: 10;
+}
+.modal {
+  background: #171a21; border: 1px solid #262b36; border-radius: 14px;
+  padding: 24px; width: 320px;
+}
+.modal h2 { margin: 0 0 16px 0; font-size: 1.1rem; }
+.modal label {
+  display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem;
+  color: #c6cad3; margin-bottom: 14px;
+}
+.modal input {
+  background: #0f1115; border: 1px solid #262b36; color: #e7e9ee;
+  border-radius: 8px; padding: 8px 10px; font-size: 0.95rem; outline: none;
+}
+.modal input:focus { border-color: #3a6ff7; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+#join-cancel, #create-cancel { background: transparent; color: #c6cad3; border: 1px solid #262b36; }
+
+.toggle-row {
+  display: flex !important; flex-direction: row !important; align-items: center;
+  justify-content: space-between; margin-bottom: 14px;
+}
+.toggle-row input[type="checkbox"] {
+  width: 40px; height: 22px; appearance: none; background: #262b36; border-radius: 999px;
+  position: relative; cursor: pointer; outline: none; transition: background 0.15s;
+}
+.toggle-row input[type="checkbox"]::before {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 18px; height: 18px;
+  background: #c6cad3; border-radius: 50%; transition: transform 0.15s;
+}
+.toggle-row input[type="checkbox"]:checked { background: #3a6ff7; }
+.toggle-row input[type="checkbox"]:checked::before { transform: translateX(18px); background: #fff; }
+
+@media (max-width: 640px) {
+  #sidebar { width: 112px; }
+  #sidebar-header { padding: 12px 8px; }
+  #sidebar-header span { display: none; }
+  .header-btns { gap: 4px; }
+  #create-chat-btn, #join-chat-btn, #collapse-sidebar-btn { width: 26px; height: 26px; font-size: 0.85rem; }
+  .tab-name { display: none; }
+  .tab { justify-content: center; }
+}
+
+/* Very narrow / non-standard phones (foldables, small-screen budget phones) */
+@media (max-width: 340px) {
+  #sidebar { width: 88px; }
+  .header-btns { flex-wrap: wrap; gap: 4px; justify-content: center; }
+  #create-chat-btn, #join-chat-btn, #collapse-sidebar-btn { width: 24px; height: 24px; font-size: 0.85rem; }
+  .msg { max-width: 85%; }
+  .call-remote-video { width: 110px; height: 82px; }
+}
+
+
+/* Landscape phones: very little vertical space, especially with the keyboard
+   open — shrink the chrome so the message list and input stay usable. */
+@media (max-height: 480px) and (orientation: landscape) {
+  #sidebar-header { padding-top: calc(8px + var(--safe-top)); padding-bottom: 8px; }
+  #chat-header { padding-top: calc(8px + var(--safe-top)); padding-bottom: 8px; }
+  #message-form { padding-top: 8px; padding-bottom: calc(8px + var(--safe-bottom)); }
+  #call-bar { padding: 6px 16px; flex-wrap: wrap; gap: 6px; }
+  .call-remote-video { width: 100px; height: 75px; }
+  #call-videos { padding: 6px 20px; }
+  /* Sidebar tabs eat vertical space fast in landscape on short screens —
+     keep it icon-only like the narrow-width breakpoint. */
+  #sidebar { width: 72px; }
+  #sidebar-header span { display: none; }
+  .tab-name { display: none; }
+}
+
+/* Modals must never exceed the viewport, whatever the screen shape */
+.modal {
+  width: min(320px, 92vw);
+  max-height: 88vh;
+  overflow-y: auto;
+}
+.modal-overlay {
+  padding: 16px;
+}
+
+/* Fullscreen call overlay */
+#fullscreen-call {
+  position: fixed; inset: 0; z-index: 50;
+  background: #000;
+  display: flex; flex-direction: column;
+  padding-top: var(--safe-top); padding-bottom: var(--safe-bottom);
+  padding-left: var(--safe-left); padding-right: var(--safe-right);
+}
+#fullscreen-call-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 20px; color: #fff; font-weight: 600; flex-shrink: 0;
+}
+#exit-fullscreen-call-btn {
+  background: rgba(255,255,255,0.12); border: none; color: #fff;
+  width: 36px; height: 36px; border-radius: 50%; font-size: 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+#exit-fullscreen-call-btn:hover { background: rgba(255,255,255,0.2); }
+#fullscreen-call-videos {
+  flex: 1; display: flex; flex-wrap: wrap; align-items: center; justify-content: center;
+  gap: 10px; padding: 8px; overflow: auto; min-height: 0;
+}
+#fullscreen-call-videos .call-remote-video,
+#fullscreen-call-videos .call-local-video {
+  width: auto; height: auto;
+  max-width: 100%; max-height: 65vh;
+  flex: 1 1 280px;
+  border-radius: 14px;
+}
+#fullscreen-call-controls {
+  display: flex; justify-content: center; gap: 16px;
+  padding: 20px; padding-bottom: calc(20px + var(--safe-bottom));
+  flex-shrink: 0;
+  position: relative;
+}
+#fullscreen-call-controls button {
+  background: rgba(255,255,255,0.12); border: none; color: #fff;
+  width: 54px; height: 54px; border-radius: 50%; font-size: 1.3rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  padding: 10px; overflow: hidden;
+}
+#fullscreen-call-controls button:hover { background: rgba(255,255,255,0.2); }
+#fs-hangup-btn { background: #e5484d; }
+#fs-hangup-btn:hover { background: #ff5c60; }

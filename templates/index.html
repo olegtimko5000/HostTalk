@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>xeuey talk</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}?v=17">
+</head>
+<body>
+
+<div id="app">
+
+  <!-- Left sidebar: list of joined chats + button to join a new one -->
+  <aside id="sidebar">
+    <div id="sidebar-header">
+      <span>xeuey talk</span>
+      <div class="header-btns">
+        <button id="create-chat-btn" title="Створити новий чат">+</button>
+        <button id="join-chat-btn" title="Приєднатись до чату">↪</button>
+      </div>
+    </div>
+    <div id="tab-list"></div>
+    <button id="collapse-sidebar-btn" title="Сховати список чатів">‹</button>
+  </aside>
+
+  <!-- Main chat area -->
+  <main id="chat-area">
+    <button id="expand-sidebar-btn" title="Показати список чатів" style="display:none;">☰</button>
+
+    <div id="empty-state">
+      <p>Ти ще не в жодному чаті.</p>
+      <div class="empty-btns">
+        <button id="empty-create-btn">Створити чат</button>
+        <button id="empty-join-btn">Приєднатись до чату</button>
+      </div>
+    </div>
+
+    <div id="chat-view" style="display:none;">
+      <header id="chat-header">
+        <div id="chat-header-left">
+          <span id="chat-room-name"></span>
+        </div>
+        <div class="header-actions">
+          <button id="call-btn" title="Голосовий дзвінок"><img class="btn-icon" src="{{ url_for('static', filename='icons/start_call_v2.png') }}" alt=""></button>
+          <button id="leave-btn" title="Вийти з групи">Вийти</button>
+        </div>
+      </header>
+
+      <div id="call-bar" style="display:none;">
+        <div id="call-participants"></div>
+        <div id="call-controls">
+          <button id="fullscreen-call-btn" title="На весь екран"><img class="btn-icon" src="{{ url_for('static', filename='icons/fullscreen.png', v=2) }}" alt=""></button>
+          <button id="mute-btn" title="Мікрофон"><img class="btn-icon" id="mute-btn-icon" src="{{ url_for('static', filename='icons/mic_on.png', v=2) }}" alt=""></button>
+          <button id="camera-btn" title="Камера"><img class="btn-icon" id="camera-btn-icon" src="{{ url_for('static', filename='icons/camera_off.png', v=2) }}" alt=""></button>
+          <button id="switch-camera-btn" title="Перемкнути камеру" class="btn-hidden"><img class="btn-icon" src="{{ url_for('static', filename='icons/switch_camera.png', v=2) }}" alt=""></button>
+          <button id="screenshare-btn" title="Демонстрація екрана"><img class="btn-icon" src="{{ url_for('static', filename='icons/screenshare.png', v=2) }}" alt=""></button>
+          <button id="hangup-btn" title="Завершити дзвінок"><img class="btn-icon" src="{{ url_for('static', filename='icons/end_call.png', v=2) }}" alt=""></button>
+        </div>
+      </div>
+      <div id="call-videos"></div>
+
+      <div id="messages"></div>
+      <form id="message-form">
+        <button type="button" id="attach-btn" title="Прикріпити файл"><img class="btn-icon" src="{{ url_for('static', filename='icons/attach_v3.png') }}" alt=""></button>
+        <input id="file-input" type="file" hidden>
+        <input id="message-input" type="text" placeholder="Написати повідомлення..." autocomplete="off" maxlength="2000">
+        <button type="submit"><img class="btn-icon" src="{{ url_for('static', filename='icons/send.png', v=2) }}" alt=""></button>
+      </form>
+      <div id="upload-progress" style="display:none;"></div>
+    </div>
+  </main>
+
+</div>
+
+<!-- Fullscreen call overlay (Telegram-style) -->
+<div id="fullscreen-call" style="display:none;">
+  <div id="fullscreen-call-header">
+    <span id="fullscreen-call-title"></span>
+    <button id="exit-fullscreen-call-btn" title="Згорнути"><img class="btn-icon icon-flip" src="{{ url_for('static', filename='icons/fullscreen.png', v=2) }}" alt=""></button>
+  </div>
+  <div id="fullscreen-call-videos"></div>
+  <div id="fullscreen-call-controls">
+    <button id="fs-mute-btn" title="Мікрофон"><img class="btn-icon" id="fs-mute-btn-icon" src="{{ url_for('static', filename='icons/mic_on.png', v=2) }}" alt=""></button>
+    <button id="fs-camera-btn" title="Камера"><img class="btn-icon" id="fs-camera-btn-icon" src="{{ url_for('static', filename='icons/camera_off.png', v=2) }}" alt=""></button>
+    <button id="fs-switch-camera-btn" title="Перемкнути камеру" class="btn-hidden"><img class="btn-icon" src="{{ url_for('static', filename='icons/switch_camera.png', v=2) }}" alt=""></button>
+    <button id="fs-screenshare-btn" title="Демонстрація екрана"><img class="btn-icon" src="{{ url_for('static', filename='icons/screenshare.png', v=2) }}" alt=""></button>
+    <button id="fs-hangup-btn" title="Завершити дзвінок"><img class="btn-icon" src="{{ url_for('static', filename='icons/end_call.png', v=2) }}" alt=""></button>
+  </div>
+</div>
+
+<!-- Create room modal -->
+<div id="create-modal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h2>Створити новий чат</h2>
+    <form id="create-form">
+      <label>Назва чату
+        <input id="create-room" type="text" placeholder="напр. xeuey" maxlength="40" required>
+      </label>
+      <label>Твоє ім'я
+        <input id="create-name" type="text" placeholder="напр. uzer1" maxlength="30" required>
+      </label>
+      <label class="toggle-row">
+        <span>Чат з паролем</span>
+        <input id="create-has-password" type="checkbox">
+      </label>
+      <label id="create-password-row" style="display:none;">Пароль
+        <input id="create-password" type="text" placeholder="Ваш пароль" maxlength="60">
+      </label>
+      <div class="modal-actions">
+        <button type="button" id="create-cancel">Скасувати</button>
+        <button type="submit">Створити</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Join room modal -->
+<div id="join-modal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h2>Приєднатись до чату</h2>
+    <form id="join-form">
+      <label>Назва чату
+        <input id="join-room" type="text" placeholder="напр. xeuey" maxlength="40" required>
+      </label>
+      <label>Твоє ім'я
+        <input id="join-name" type="text" placeholder="напр. uzer1" maxlength="30" required>
+      </label>
+      <label>Пароль (якщо є)
+        <input id="join-password" type="text" placeholder="Залиш пустим, якщо без пароля" maxlength="60">
+      </label>
+      <div class="modal-actions">
+        <button type="button" id="join-cancel">Скасувати</button>
+        <button type="submit">Приєднатись</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="{{ url_for('static', filename='app.js') }}?v=17"></script>
+</body>
+</html>
